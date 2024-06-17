@@ -1,6 +1,8 @@
 #include "main.h"
 #include "preview.h"
 #include <cstring>
+#include <cuda_runtime.h>
+#include <iostream>
 
 static std::string startTimeString;
 
@@ -27,6 +29,23 @@ int iteration;
 int width;
 int height;
 
+void printGPUInfo() {
+	int deviceCount;
+	cudaGetDeviceCount(&deviceCount); // 获取GPU设备数量
+	std::cout << "Number of GPU devices found: " << deviceCount << std::endl;
+
+	for (int i = 0; i < deviceCount; i++) {
+		cudaDeviceProp deviceProp;
+		cudaGetDeviceProperties(&deviceProp, i); // 获取指定GPU的属性
+		std::cout << "Device " << i << ": " << deviceProp.name << std::endl;
+		std::cout << "  Compute capability: " << deviceProp.major << "." << deviceProp.minor << std::endl;
+		std::cout << "  Total global memory: " << deviceProp.totalGlobalMem / (1024 * 1024) << " MB" << std::endl;
+		std::cout << "  Multiprocessors: " << deviceProp.multiProcessorCount << std::endl;
+		std::cout << "  Warp size: " << deviceProp.warpSize << std::endl;
+	}
+	std::cout << std::endl;
+}
+
 //-------------------------------
 //-------------MAIN--------------
 //-------------------------------
@@ -38,6 +57,8 @@ int main(int argc, char** argv) {
 		printf("Usage: %s SCENEFILE.txt\n", argv[0]);
 		return 1;
 	}
+
+	printGPUInfo();
 
 	const char* sceneFile = argv[1];
 
@@ -82,6 +103,8 @@ int main(int argc, char** argv) {
 
 	return 0;
 }
+
+
 
 void saveImage() {
 	float samples = iteration;

@@ -95,6 +95,8 @@ set(sources
     src/scene.cpp
     src/preview.cpp
     src/utilities.cpp
+    src/tiny_obj_loader.cc
+    src/tiny_gltf.cc
 	
     src/ImGui/imgui.cpp 
       src/ImGui/imgui_demo.cpp 
@@ -113,9 +115,19 @@ source_group(Sources FILES ${sources})
 
 #add_subdirectory(src/ImGui)
 #add_subdirectory(stream_compaction)  # TODO: uncomment if using your stream compaction
+link_directories(${CMAKE_SOURCE_DIR}/external/lib)
 
 cuda_add_executable(${CMAKE_PROJECT_NAME} ${sources} ${headers})
 target_link_libraries(${CMAKE_PROJECT_NAME}
     ${LIBRARIES}
     #stream_compaction  # TODO: uncomment if using your stream compaction
+    OpenImageDenoise
     )
+
+file(GLOB OIDN_DLLS "${CMAKE_SOURCE_DIR}/external/bin/*.dll")
+foreach(DLL ${OIDN_DLLS})
+    add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${DLL}
+            ${CMAKE_BINARY_DIR})
+endforeach()

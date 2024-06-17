@@ -10,6 +10,7 @@
 enum GeomType {
     SPHERE,
     CUBE,
+    MESH,
 };
 
 struct Ray {
@@ -26,6 +27,34 @@ struct Geom {
     glm::mat4 transform;
     glm::mat4 inverseTransform;
     glm::mat4 invTranspose;
+    //For Objs
+    int bvhrootidx;
+    int meshidx;
+    int meshcnt;
+};
+
+// Axis-aligned bounding box
+struct AABB {
+    glm::vec3 min = glm::vec3(FLT_MAX);
+    glm::vec3 max = glm::vec3(-FLT_MAX);
+    glm::vec3 centroid = glm::vec3(0.f);
+};
+
+// Triangle mesh
+struct Mesh {
+    int v[3];
+    int vn[3];
+    int vt[3];
+    int materialid = -1;
+    AABB aabb;
+};
+
+// Bounding volume hierarchy node
+struct BVHNode {
+    AABB aabb;
+    int left = -1;
+    int right = -1;
+    int meshidx = -1;
 };
 
 struct Material {
@@ -38,6 +67,14 @@ struct Material {
     float hasRefractive;
     float indexOfRefraction;
     float emittance;
+    //PBR Material From TinyObjLoader
+    glm::vec3 albedo;
+    float roughness;
+    float metallic;
+    float ior;
+    float opacity;
+    //Procedual Texture
+    int procTextType = -1;
 };
 
 struct Camera {
@@ -49,6 +86,8 @@ struct Camera {
     glm::vec3 right;
     glm::vec2 fov;
     glm::vec2 pixelLength;
+    float lensRadius = -1;
+    float focalDistance = -1;
 };
 
 struct RenderState {
@@ -73,4 +112,5 @@ struct ShadeableIntersection {
   float t;
   glm::vec3 surfaceNormal;
   int materialId;
+  glm::vec2 texcoord;
 };
