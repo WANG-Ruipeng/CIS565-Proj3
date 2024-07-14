@@ -13,6 +13,22 @@ static bool middleMousePressed = false;
 static double lastX;
 static double lastY;
 
+// CHECKITOUT: simple UI parameters.
+// Search for any of these across the whole project to see how these are used,
+// or look at the diff for commit 1178307347e32da064dce1ef4c217ce0ca6153a8.
+// For all the gory GUI details, look at commit 5feb60366e03687bfc245579523402221950c9c5.
+int ui_iterations = 0;
+int startupIterations = 0;
+int lastLoopIterations = 0;
+bool ui_showGbuffer = false;
+bool ui_showPosition = false;
+bool ui_denoise = false;
+int ui_filterSize = 80;
+float ui_colorWeight = 0.45f;
+float ui_normalWeight = 0.35f;
+float ui_positionWeight = 0.2f;
+bool ui_saveAndExit = false;
+
 static bool camchanged = true;
 static float dtheta = 0, dphi = 0;
 static glm::vec3 cammove;
@@ -75,6 +91,9 @@ int main(int argc, char** argv) {
 	width = cam.resolution.x;
 	height = cam.resolution.y;
 
+	ui_iterations = renderState->iterations;
+	startupIterations = ui_iterations;
+
 	glm::vec3 view = cam.view;
 	glm::vec3 up = cam.up;
 	glm::vec3 right = glm::cross(view, up);
@@ -130,6 +149,11 @@ void saveImage() {
 }
 
 void runCuda() {
+	if (lastLoopIterations != ui_iterations) {
+		lastLoopIterations = ui_iterations;
+		camchanged = true;
+	}
+
 	if (camchanged) {
 		iteration = 0;
 		Camera& cam = renderState->camera;
@@ -158,19 +182,35 @@ void runCuda() {
 		pathtraceInit(scene);
 	}
 
-	if (iteration < renderState->iterations) {
-		uchar4* pbo_dptr = NULL;
+	uchar4* pbo_dptr = NULL;
+	cudaGLMapBufferObject((void**)&pbo_dptr, pbo);
+	if (iteration < ui_iterations) {
+		
 		iteration++;
-		cudaGLMapBufferObject((void**)&pbo_dptr, pbo);
-
 		// execute the kernel
 		int frame = 0;
 		pathtrace(pbo_dptr, frame, iteration);
-
-		// unmap buffer object
-		cudaGLUnmapBufferObject(pbo);
 	}
 	else {
+		saveImage();
+		pathtraceFree();
+		cudaDeviceReset();
+		exit(EXIT_SUCCESS);
+	}
+
+	if (ui_showGbuffer) {
+		showGBuffer(pbo_dptr, ui_showPosition);
+	}
+	else if (ui_denoise) {
+		showDenoised(pbo_dptr, ui_filterSize, ui_colorWeight, ui_normalWeight, ui_positionWeight, iteration);
+	}
+	else {
+		showImage(pbo_dptr, iteration);
+	}
+	// unmap buffer object
+	cudaGLUnmapBufferObject(pbo);
+
+	if (ui_saveAndExit) {
 		saveImage();
 		pathtraceFree();
 		cudaDeviceReset();
